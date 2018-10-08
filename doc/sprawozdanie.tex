@@ -1,0 +1,446 @@
+\documentclass[]{mwart}
+
+\usepackage{tasks} %supposedly better than multicol pack.
+\usepackage{multicol} %allows multicolumn itemize
+\usepackage{enumitem} %allows [label={}] \alph* \Alph* \roman*
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage{titling}
+\usepackage{amssymb} %allows \mathbb{R}
+\usepackage{amsthm} %allows no theorems numbering
+\usepackage[leqno]{amsmath}
+\usepackage{graphicx,color}
+\usepackage{colortbl}
+%\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{tabu}%
+\usepackage{longtable}
+\usepackage{breqn} %allows breaking equations (use dmath)
+\usepackage[squaren,Gray]{SIunits}
+%POLSKIE ZNAKI
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+
+\usepackage{etoolbox} %changes font to default in theorems
+\setlength{\textheight}{24cm}
+
+\makeatletter
+\patchcmd{\@begintheorem}{\itshape}{}{}{}
+\patchcmd{\@opargbegintheorem}{\itshape}{}{}{}
+\makeatother
+
+\theoremstyle{definition}
+%prevents equations from breaking
+%\relpenalty=10000
+%\binoppenalty=10000
+
+%ładne przerwy między wektorami w macierzach
+\newcommand{\matsp}{\hspace*{1mm} | \hspace*{1mm}}
+% symbol +/-
+\newcommand{\rpm}{\raisebox{.2ex}{$\scriptstyle\pm$}}
+
+\settasks{counter-format=(tsk[1])}
+
+\title{Pracownia z analizy numerycznej \\
+	\large Sprawozdanie do zadania P2.2.}
+
+\author{Jan Sierpina, 291116 \\
+	Oskar Tołkacz, 291583}
+
+\newtheorem{Def}{Definicja}
+\newtheorem{Uw}{Uwaga}
+\newtheorem{Tw}{Twierdzenie}
+\newtheorem{Dd}{Dowód}
+
+\begin{document}
+
+\maketitle
+
+\section*{Wstęp}
+GPS (ang. Global Positioning System) to system nawigacji satelitarnej, który pozwala na określenie lokalizacji w praktycznie dowolnym miejscu na ziemi. Prace nad systemem GPS rozpoczęły się już w roku 1973. Początkowo używany był przez jednostki militarne. Dopiero w 2000 roku udostępniono go w pełni do użytku dla osób prywatnych.
+
+Satelity GPS nadają sygnał z zakodowaną informacją o swoim położeniu i o momencie jego wysłania. Odbiornik z wbudowanym zegarem, jest w stanie obliczyć czas lotu sygnału i znając jego prędkość (prędkość światła), może określić odległość dzielącą go od satelity. Na podstawie informacji o położeniu trzech satelit i odległości od nich, możliwe jest ustalenie pozycji odbiorcy.
+
+Satelity wyposażone są w bardzo dokładne zegary atomowe, które są codziennie synchronizowane między sobą. Jednak osiągnięcie podobnej precyzji w zegarze odbiornika jest technicznie niewykonalne. Niemożliwe jest zatem określenie odległości od satelity, tylko na podstawie czasu nadania przez nią sygnału. Problem ten można rozwiązać, traktując różnicę domniemanego czasu lotu sygnałów z satelit i rzeczywistego jako kolejną niewiadomą.
+
+Wtedy, do wyznaczenia pozycji geograficznej odbiornika, czyli trzech współrzędnych i różnicy między czasem zegara odbiornika oraz satelity, potrzeba sygnału z czterech satelit.
+
+Poniżej przedstawiony został układ równań którego rozwiązaniem są szukane przez nas cztery wartości:
+
+\begin{equation*}
+		\begin{aligned}
+		(x - a_1)^2 + (y - b_1)^2 + (z - c_1)^2 = [C(t_1 - T)]^2 \\
+		(x - a_2)^2 + (y - b_2)^2 + (z - c_2)^2 = [C(t_2 - T)]^2 \\
+		(x - a_3)^2 + (y - b_3)^2 + (z - c_3)^2 = [C(t_3 - T)]^2 \\
+		(x - a_4)^2 + (y - b_4)^2 + (z - c_4)^2 = [C(t_4 - T)]^2
+	\end{aligned}
+\end{equation*}
+gdzie $C$ oznacza prędkość światła, $a_i, b_i, c_i$, $i \in \{1,2,3,4\}$ to współrzędne poszczególnych satelit, a $t_i$, $i \in \{1,2,3,4\}$, to domniemane czasy lotu sygnałów. Szukane przez nas współrzędne to $x, y, z$ i różnica między zegarami $T$.
+
+W niniejszej pracy przedstawimy sposoby rozwiązywania tego układu przy pomocy metody Newtona oraz za pomocą wzorów algebraicznych. Następnie przetestujemy obie metody i porównamy rezultaty. Zbadamy również sposoby określania lokalizacji przy użyciu innej liczby satelit.
+
+\section*{Metoda}
+	\subsection*{Podejście wykorzystujące metodę Newtona}
+Równania, które opisują pozycje satelit i czas lotu sygnału, tworzą układ równań nieliniowych. Aby znaleźć ich rozwiązanie użyjemy metody Newtona. Szukamy wektora $v := [x, y, z, T]$ takiego, że:
+$$ (x-a_i)^2 + (y-b_i)^2 + (z-c_i)^2-[C(t_i-T)]^2 = 0, i \in (1,2,3,4) $$
+Zaczynamy z dowolnym wektorem startowym $v_0$. Będziemy iteracyjnie otrzymywać coraz lepsze przybliżenia wektora $v$ będącego rozwiązaniem równania. Poniżej przedstawiony został wzór na kolejne przybliżenie:
+$$ v_{n+1} = v_n - F(v_n)*J_n^{-1} $$
+
+gdzie
+$$v_n = [x_n, y_n, z_n, T_n]$$
+$$F = [f_1(v_n), f_2(v_n), f_3(v_n), f_4(v_n)]$$
+$$ f_i = (x_n-a_i)^2 + (y_n-b_i)^2 + (z_n-c_i)^2-[C(t_i-T_n)]^2, i \in (1,2,3,4) $$
+$$
+J_n=
+\begin{bmatrix}
+    \frac{\partial f_1}{\partial x_n}(v_n)       & \frac{\partial f_1}{\partial y_n}(v_n) & \frac{\partial f_1}{\partial z_n}(v_n) & \frac{\partial f_1}{\partial T_n}(v_n) \\
+    \frac{\partial f_2}{\partial x_n}(v_n)       & \frac{\partial f_2}{\partial y_n}(v_n) & \frac{\partial f_2}{\partial z_n}(v_n) & \frac{\partial f_2}{\partial T_n}(v_n) \\
+    \frac{\partial f_3}{\partial x_n}(v_n)       & \frac{\partial f_3}{\partial y_n}(v_n) & \frac{\partial f_3}{\partial z_n}(v_n) & \frac{\partial f_3}{\partial T_n}(v_n) \\
+    \frac{\partial f_4}{\partial x_n}(v_n)       & \frac{\partial f_4}{\partial y_n}(v_n) & \frac{\partial f_4}{\partial z_n}(v_n) & \frac{\partial f_4}{\partial T_n}(v_n)
+\end{bmatrix}
+$$
+
+\subsection*{Podejście algebraiczne}
+Zadanie można rozwiązać korzystając z własności wyznaczników. Będziemy rozwiązywać następujący układ równań nieliniowych, gdzie zmiennymi są $x$, $y$, $z$ oraz $T$.
+% w ten sposób numerowanie jest po prawej, chyba lepiej widoczne
+\begin{align*}
+	R_i = (x - a_i)^2 + (y - b_i)^2 + (z - c_i)^2 - [C(t_i - T)]^2 = 0, i \in \{1,2,3,4\}
+\end{align*}
+
+Zauważmy, że z powyższego układu możemy uzyskać nowy układ trzech równań liniowych: $R_1 - R_2$, $R_1 - R_3$ oraz $R_1 - R_4$. Z tych równań będziemy w stanie wyznaczyć
+$x$, $y$ oraz $z$ w zależności od $T$.\\
+
+Niech $\vec U_x =
+				\begin{bmatrix}
+					2(a_2-a_1) \\ 2(a_3-a_1) \\ 2(a_4-a_1)
+				\end{bmatrix}$,
+			$\vec U_y =
+				\begin{bmatrix}
+					2(b_2-b_1) \\ 2(b_3-b_1) \\ 2(b_4-b_1)
+				\end{bmatrix}$,
+			$\vec U_z =
+				\begin{bmatrix}
+					2(c_2-c_1) \\ 2(c_3-c_1) \\ 2(c_4-c_1)
+				\end{bmatrix}$, \\
+			\hspace*{12mm}
+			$\vec U_T =
+				\begin{bmatrix}
+					2C^2(t_1-t_2) \\ 2C^2(t_1-t_3) \\ 2C^2(t_1-t_4)
+				\end{bmatrix}$,
+			$\vec W =
+				\begin{bmatrix}
+					a_{1}^{2} - a_{2}^{2} + b_{1}^{2} - b_{2}^{2} + c_{1}^{2} - c_{2}^{2} + C^2t_{2}^{2} - C^2t_{1}^{2} \\
+					a_{1}^{2} - a_{3}^{2} + b_{1}^{2} - b_{3}^{2} + c_{1}^{2} - c_{3}^{2} + C^2t_{3}^{2} - C^2t_{1}^{2} \\
+					a_{1}^{2} - a_{4}^{2} + b_{1}^{2} - b_{4}^{2} + c_{1}^{2} - c_{4}^{2} + C^2t_{4}^{2} - C^2t_{1}^{2}
+				\end{bmatrix}$.
+\\ \\
+
+Wtedy nowy układ równań możemy zapisać w postaci:
+\[ x \vec U_x + y \vec U_y + z \vec U_z + T \vec U_T + \vec W = \vec 0 \]
+
+% WYZNACZANIE x
+Teraz wyznaczmy $x$ w zależności od $T$:
+\[
+	\det
+		\begin{pmatrix}
+			\vec U_y \matsp
+			\vec U_z \matsp
+			x \vec U_x + y \vec U_y + z \vec U_z + T \vec U_T + \vec W
+		\end{pmatrix} = 0
+\]
+
+Korzystając z podstawowych własności wyznacznika otrzymujemy:
+\[
+	x \det
+		\begin{pmatrix}
+			\vec U_y \matsp
+			\vec U_z \matsp
+			\vec U_x
+		\end{pmatrix}
+	+ T \det
+		\begin{pmatrix}
+			\vec U_y \matsp
+			\vec U_z \matsp
+			\vec U_T
+		\end{pmatrix}
+		+ \det
+			\begin{pmatrix}
+				\vec U_y \matsp
+				\vec U_z \matsp
+				\vec W
+			\end{pmatrix}
+		=0
+\]
+
+Niech:
+\begin{align*}
+	l_1 = \det \begin{pmatrix} \vec U_y \matsp \vec U_z \matsp \vec U_x \end{pmatrix} \\
+	l_2 = \det \begin{pmatrix} \vec U_y \matsp \vec U_z \matsp \vec U_T \end{pmatrix} \\
+	l_3 = \det \begin{pmatrix} \vec U_y \matsp \vec U_z \matsp  \vec W \end{pmatrix}
+\end{align*}
+
+Wtedy $xl_1 + Tl_2 + l_3 = 0$, stąd $x = \frac{-Tl_2 - l_3}{l_1}$. \\
+
+% WYZNACZANIE y
+Podobnie wyznaczamy $y$:
+
+\[
+	\det
+		\begin{pmatrix}
+			\vec U_x \matsp
+			\vec U_z \matsp
+			x \vec U_x + y \vec U_y + z \vec U_z + T \vec U_T + \vec W
+		\end{pmatrix} = 0
+\]
+
+Korzystając z podstawowych własności wyznacznika otrzymujemy:
+\[
+	y \det
+		\begin{pmatrix}
+			\vec U_x \matsp
+			\vec U_z \matsp
+			\vec U_y
+		\end{pmatrix}
+	+ T \det
+		\begin{pmatrix}
+			\vec U_x \matsp
+			\vec U_z \matsp
+			\vec U_T
+		\end{pmatrix}
+		+ \det
+			\begin{pmatrix}
+				\vec U_x \matsp
+				\vec U_z \matsp
+				\vec W
+			\end{pmatrix}
+		=0
+\]
+
+Niech:
+\begin{align*}
+	m_1 = \det \begin{pmatrix} \vec U_x \matsp \vec U_z \matsp \vec U_x \end{pmatrix} \\
+	m_2 = \det \begin{pmatrix} \vec U_x \matsp \vec U_z \matsp \vec U_T \end{pmatrix} \\
+	m_3 = \det \begin{pmatrix} \vec U_x \matsp \vec U_z \matsp  \vec W \end{pmatrix}
+\end{align*}
+
+Wtedy $ym_1 + Tm_2 + m_3 = 0$, stąd $y = \frac{-Tm_2 - m_3}{m_1}$. \\
+
+Analogicznie wyznaczamy $z$:
+
+\[
+	\det
+		\begin{pmatrix}
+			\vec U_x \matsp
+			\vec U_y \matsp
+			x \vec U_x + y \vec U_y + z \vec U_z + T \vec U_T + \vec W
+		\end{pmatrix} = 0
+\]
+
+Korzystając z podstawowych własności wyznacznika otrzymujemy:
+\[
+	z \det
+		\begin{pmatrix}
+			\vec U_x \matsp
+			\vec U_y \matsp
+			\vec U_z
+		\end{pmatrix}
+	+ T \det
+		\begin{pmatrix}
+			\vec U_x \matsp
+			\vec U_y \matsp
+			\vec U_T
+		\end{pmatrix}
+		+ \det
+			\begin{pmatrix}
+				\vec U_x \matsp
+				\vec U_y \matsp
+				\vec W
+			\end{pmatrix}
+		=0
+\]
+
+Niech:
+\begin{align*}
+	n_1 = \det \begin{pmatrix} \vec U_x \matsp \vec U_y \matsp \vec U_z \end{pmatrix} \\
+	n_2 = \det \begin{pmatrix} \vec U_x \matsp \vec U_y \matsp \vec U_T \end{pmatrix} \\
+	n_3 = \det \begin{pmatrix} \vec U_x \matsp \vec U_y \matsp  \vec W \end{pmatrix}
+\end{align*}
+
+Wtedy $zn_1 + Tn_2 + n_3 = 0$, stąd $y = \frac{-Tn_2 - n_3}{n_1}$. \\
+
+Wprowadźmy kolejne oznaczenia, niech:
+\[
+\begin{minipage}{.35\linewidth}
+\centering
+$\begin{array}{r@{{}\mathrel{=}{}}l}
+	e_1 & - \frac{l_1}{l_2} \\[\jot]
+ 	e_2 & - \frac{l_3}{l_1}
+\end{array}$
+\end{minipage}%
+\begin{minipage}{.3\linewidth}
+\centering
+$\begin{array}{r@{{}\mathrel{=}{}}l}
+	e_3 & - \frac{m_1}{m_2} \\[\jot]
+	e_4 & - \frac{m_3}{m_1}
+\end{array}$
+\end{minipage}%
+\begin{minipage}{.35\linewidth}
+\centering
+$\begin{array}{r@{{}\mathrel{=}{}}l}
+	e_5 & - \frac{n_1}{n_2} \\[\jot]
+	e_6 & - \frac{n_3}{n_1}
+\end{array}$
+\end{minipage}
+\]
+
+Wtedy mamy:
+\begin{align*}
+\begin{split}
+	x = e_1T + e_2 \\
+	y = e_3T + e_4 \\
+	z = e_5T + e_6
+\end{split}
+	\hspace*{16mm} oraz
+\begin{split}
+	x^2 = e_1^2T^2 + e_2^2 + 2e_1e_2T\\
+	y^2 = e_3^2T^2 + e_4^2 + 2e_3e_4T \\
+	z^2 = e_5^2T^2 + e_6^2 + 2e_5e_6T
+\end{split}
+\end{align*}
+
+Podstawiając do równania $(1)$ otrzymujemy:
+\begin{dmath*}
+	e_1^2T^2 + e_3^2T^2 + e_5^2T^2 + 2T(e_1e_2+e_3e_4+e_5e_6) + e_2^2 + e_4^2 + e_6^2 + a_1^2 + b_1^2 + c_1^2 - 2(a_1e_1T + a_1e_2+b_1e_3T+b_1e_4+c_1e_5T+c_1e_6) + C^2(2t_1T-t_1^2-T^2) = 0
+\end{dmath*}
+
+Przyjmijmy kolejne oznaczenia:
+
+\begin{equation*}
+	G = e_1^2 + e_3^2 + e_5^2 - C^2
+\end{equation*}
+\begin{equation*}
+	H= 2(e_1e_2 + e_3e_4 + e_5e_6 - a_1e_1-b_1e_3 - c_1e_5 + C^2t_1)
+\end{equation*}
+\begin{equation*}
+	I= e_2^2 e_4^2 + e_6^2 - 2 (a_1e_2 + b_1e_4 + c1_e6) +a_1^2 + b_1^2 + c_1^2 - C^2t_1^2
+\end{equation*}
+
+Wtedy $\Delta = H^2-4GI$. Stąd otrzymujemy:
+\[
+	T = \frac{-H \rpm \sqrt{\Delta}}{2G}
+\]
+
+Teraz łatwo już wyznaczyć $x$, $y$ oraz $z$.
+
+\section*{Testy}
+
+Komplet danych do przetestowania tej metody stworzyliśmy w następujący sposób:
+
+Przyjęliśmy, że Ziemia jest kulą, której środek znajduje się w punkcie (0, 0, 0), jej promień wynosi 6371 km, promień orbity satelit 20180 km, a prędkość światła wynosi
+$ 299 792 458 \meter\per\second $. Następnie wybraliśmy punkt na powierzchni Ziemi, położenie czterech satelit na ich orbicie i obliczyliśmy czas lotu sygnałów od satelit do odbiornika na powierzchni. Wybraliśmy jeszcze różnicę w czasach zegarów urządzeń i tak wygenerowaliśmy zaburzone czasy lotu.
+
+Uzyskane dane wykorzystaliśmy do zapisania układu równań, który rozwiązywaliśmy zarówno metodą Newtona jak i podejściem algebraicznym. Sprawdziliśmy czy otrzymane położenie zgadza się z początkowo wybranym położeniem na powierzchni Ziemi. Warto zauważyć, że układy równań GPS mają dwa rozwiązania. W praktyce jednak łatwo stwierdzić, które z nich jest tym szukanym, bowiem przy realnych danych szukane rozwiązanie będzie określało punkt na powierzchni Ziemi, a to drugie punkt w przestrzeni kosmicznej.
+
+Poniżej przedstawiono przykładowy zestaw danych i wynik uzyskany dla metody Newtona i podejścia algebraicznego:
+$$ [x, y, z, T] = [2505000, 5210000, 2677781.917931, 1] $$
+$$ [a_1, b_1, c_1, t_1] = [1300000, 20000000, 2354230.235130, 1.049509] $$
+$$ [a_2, b_2, c_2, t_2] = [7030000, 13200000, 13548856.040271, 1.047467] $$
+$$ [a_3, b_3, c_3, t_3] = [11500000, 13700000, 9343040.190431, 1.046867] $$
+$$ [a_4, b_4, c_4, t_4] = [18800000, 1400000, 7199472.202877, 1.057822] $$
+gdzie $x, y, z, T$ oznaczają odpowiednio współrzędne obranego punktu na Ziemi i różnicę zegarów. $a_i, b_i, c_i $ oznaczają współrzędne $i$-tej satelity, a $t_i$ czas lotu sygnału od niej do odbiorcy, powiększony o $T$.
+
+Niech $[x_N, y_N, z_N, T_N]$ oznacza wynik otrzymany za pomocą metody Newtona. Dla powyższych danych przy 20 iteracjach metody Newtona otrzymaliśmy:
+
+$ [x_N, y_N, z_N, T_N] - [x, y, z, T] $ = [-5.12e-9, -4.66e-9, -4.19e-9, 1.11e-16]
+Widać, że błąd wyniku jest zupełnie nieznaczący.
+
+Niech $[x_A, y_A, z_A, T_A]$ oznacza wynik otrzymany za pomocą podejścia algebraicznego. Otrzymaliśmy wynik:
+
+$ [x_A, y_A, z_A, T_A] - [x, y, z, T] $ = [-1.49e-7, -5.07e-7, 3.04e-7, -2.22e-16]
+
+Obie metody przetestowaliśmy również na 10000 losowych zestawach danych. Szukaliśmy maksymalnej różnicy odległości pomiędzy uzyskanym przez nas wynikiem, a początkowo obranym punktem. Dla metody Newtona odległość ta wyniosła 2.85mm, a dla podejścia algebraicznego 8.85mm.
+
+\section*{Metoda najmniejszych kwadratów}
+
+W praktyce odbiornik GPS odbiera często więcej niż cztery sygnały. Wtedy układy $n$ równań, gdzie $n$ to liczba satelit, które otrzymamy w metodach Newtona i algebraicznej będą nadokreślone.
+Problem ten możemy rozwiązać szukając takich $x$, $y$, $z$ i $t$, że: $\sum_{i=1}^{n} \epsilon_i^2$, gdzie $\epsilon_i = R_i(x,y,z)$, będzie najmniejsza. $R_i$ zostało zdefiniowane w akapicie
+dotyczącym metody algebraicznej. Do znalezienia takich $x$, $y$, $z$ i $t$ możemy skorzystać z metody najmniejszych kwadratów.
+\\
+Układ równań pozwalający obliczyć pozycję odbiornika GPS jest nieliniowy, wystarczy jednak skorzystać z rozwinięcia w szereg Taylora, by otrzymać układ liniowy.
+Niech $d_i(x,y,z)$, $i \in {1,2,3,4}$ to funkcje odległości między odbiornikiem o współrzędnych $(x,y,z)$ oraz i-tym satelitą o współrzędnych $(a_i,b_i,c_i)$. Wtedy:
+
+\begin{equation*}
+	d_i(x, y, z) = \sqrt{(x - a_i)^2 + (y - b_i)^2 + (z - c_i)^2}
+\end{equation*}
+
+Będziemy chcieli rozwiązać układ równań postaci:
+\begin{equation*}
+	d_i(x,y,z) - C(t_i-T) = 0, i \in \{1,2,3,4\}
+\end{equation*}
+
+Współrzędne odbiornika możemy zapisać w postaci:
+$$(x_0 + \Delta x,y_0 + \Delta y, z_0 + \Delta z) = (x, y, z)$$
+Wtedy korzystając z rozwinięcia w szereg Taylora otrzymujemy:
+
+\begin{dmath*}
+	d_i(x,y,z) \cong d_i(x_0, y_0, z_0) + \frac{\partial d_i(x_0, y_0, z_0)}{\partial x_0}\Delta x + + \frac{\partial d_i(x_0, y_0, z_0)}{\partial y_0}\Delta y + \frac{\partial d_i(x_0, y_0, z_0)}{\partial z_0}\Delta z
+\end{dmath*}
+
+Obliczmy pochodne cząstkowe:
+\begin{align*}
+	\frac{\partial d_i(x_0, y_0, z_0)}{\partial x_0}\Delta x = - \frac{a_i-x_0}{d_i(x_0, y_0, z_0)}\Delta x \\
+	\frac{\partial d_i(x_0, y_0, z_0)}{\partial y_0}\Delta y = - \frac{b_i-y_0}{d_i(x_0, y_0, z_0)}\Delta y \\
+	\frac{\partial d_i(x_0, y_0, z_0)}{\partial z_0}\Delta z = - \frac{c_i-z_0}{d_i(x_0, y_0, z_0)}\Delta z
+\end{align*}
+
+W ten sposób otrzymujemy układ równań liniowych, teraz wystarczy skorzystać z metody najmniejszych kwadratów\cite{nptel}.
+
+\section*{Wnioski}
+Z przeprowadzonych przez nas testów widać, że nie ma praktycznego znaczenia czy układy równań GPS będziemy rozwiązywać metodą Newtona czy podejściem algebraicznym. Metoda Newtona dawała nieco lepsze wyniki od podejścia algebraicznego, jednak w obu przypadkach błędy były rzędu kilku milimetrów. Istotnym problemem przy określaniu pozycji jest natomiast dokładność zegarów satelit, która wynosi parę nanosekund. Światło w ciągu jednej nanosekundy pokojnuje około 11 cm, dlatego niewielki błąd zegara, może w praktyce oznaczać zaburzenie obliczonej pozycji o kilkadziesiąt centymetrów.
+
+% OBRAZKI
+%	\begin{figure}[h!]
+%		\centering
+%		\includegraphics[width=\textwidth]{quad_real_float64.png}
+%		\caption{Porównanie błędów bezwzględych znajdowania pierwiastków trójmianu kwadratowego dla typów Real2 i Float64 dla losowych współczynników}
+%	\end{figure}
+
+% TABELE
+%		\begin{tabular}{| c | c | c |}
+%			\hline
+%		Float64 & Real2 \\
+%			\hline
+%		\end{tabular}
+
+\begin{thebibliography}{9}
+
+\bibitem{blewitt}
+  Geoffrey Blewitt,
+  \textit{Basics of the GPS Technique: Observation Equations},
+  Department of Geomatics, University of Newcastle,
+  1997.
+
+\bibitem{thompson}
+  Richard B. Thompson,
+  \textit{Global Positioning System: The Mathematics of GPS Receiver},
+  University of Arizona, Mathematics Magazine
+  Vol. 71, No. 4, October 1998.
+
+\bibitem{bancroft}
+  Stephen Bancroft,
+  \textit{An Algebraic Solution of the GPS Equations},
+  IEEE TRANSACTIONS ON AEROSPACE AND ELECTRONIC SYSTEMS Vol. AES-21, No. 7, January1985.
+
+\bibitem{hel}
+  Y. He1, A. Bilgic,
+  \textit{Iterative least squares method for global positioning system}
+
+\bibitem{nptel}
+	http://nptel.ac.in/courses/105104100/4
+
+\bibitem{colorado}
+	https://www.colorado.edu/engineering/ASEN/asen6090/least_squares.html
+
+
+
+\end{thebibliography}
+
+\end{document}
